@@ -4,10 +4,14 @@ const firebase = require("nativescript-plugin-firebase");
 
 // Uncommment the following to see NativeScript-Vue output logs
 // Vue.config.silent = false;
+
+const $bus = new Vue({});
+
 firebase.init({
     persist: true
 }).then(
     function () {
+        $bus.$emit("firebase:initialized");
         console.log("firebase.init done");
     },
     function (error) {
@@ -15,6 +19,7 @@ firebase.init({
     }
 );
 Vue.prototype.$firebase = firebase;
+Vue.prototype.$bus = $bus;
 
 new Vue({
 

@@ -76,42 +76,58 @@
                 this.lists.todo.push(this.textFieldValue);
                 utilsModule.ad.dismissSoftInput();
                 this.textFieldValue = "";
-                this.saveLocally();
             },
             deleteFromList(key, list) {
                 list.splice(key, 1);
-                this.saveLocally();
             },
             toInProgress(key) {
                 const todoItem = this.lists.todo.splice(key, 1)[0];
                 this.lists.inProgress.push(todoItem);
-                this.saveLocally();
             },
             toFinished(key) {
                 const todoItem = this.lists.inProgress.splice(key, 1)[0];
                 this.lists.finished.push(todoItem);
-                this.saveLocally();
-            },
-            saveLocally() {
-                this.$firebase.setValue(
-                    "/lists",
-                    this.lists
-                );
             },
             getIcon(hex) {
                 return `font://${String.fromCharCode(hex)}`;
             },
-        },
-
-        mounted() {
-            this.$firebase.addValueEventListener((res) => {
-                this.lists = res.value;
+            populateLists({ value }) {
+                this.lists = value;
                 ["todo", "inProgress", "finished"].forEach((list) => {
                     if (!this.lists[list]) {
                         this.lists[list] = [];
                     }
                 });
-            }, "/lists");
+            }
+        },
+
+        watch: {
+            lists: {
+                handler(lists) {
+                    this.$firebase.setValue(
+                        "/lists",
+                        this.lists
+                    );
+                },
+                deep: true
+            }
+        },
+
+        mounted() {
+            let listeners;
+            
+            // Primera inicializacion
+            this.$bus.$on("firebase:initialized", () => {
+                this.$firebase.getValue("/lists").then(this.populateLists);
+                this.$firebase.addValueEventListener(this.populateLists, "/lists").then((listenerWrapper) => {
+                    listeners = listenerWrapper.listeners;
+                });
+            });
+
+            // Segunda vez que se ejecuta mounted +
+            if (!listeners) {
+                this.$firebase.addValueEventListener(this.populateLists, "/lists");
+            }
         },
 
         data() {
