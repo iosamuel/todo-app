@@ -63,7 +63,6 @@
 </template>
 
 <script>
-    const appSettings = require("application-settings");
     const utilsModule = require("tns-core-modules/utils/utils");
     import ItemsListView from "./ItemsListView";
 
@@ -77,6 +76,7 @@
                 this.lists.todo.push(this.textFieldValue);
                 utilsModule.ad.dismissSoftInput();
                 this.textFieldValue = "";
+                this.saveLocally();
             },
             deleteFromList(key, list) {
                 list.splice(key, 1);
@@ -93,17 +93,25 @@
                 this.saveLocally();
             },
             saveLocally() {
-                appSettings.setString("lists", JSON.stringify(this.lists));
+                this.$firebase.setValue(
+                    "/lists",
+                    this.lists
+                );
             },
             getIcon(hex) {
                 return `font://${String.fromCharCode(hex)}`;
-            }
+            },
         },
 
         mounted() {
-            if (appSettings.getString("lists")) {
-                this.lists = JSON.parse(appSettings.getString("lists"));
-            }
+            this.$firebase.addValueEventListener((res) => {
+                this.lists = res.value;
+                ["todo", "inProgress", "finished"].forEach((list) => {
+                    if (!this.lists[list]) {
+                        this.lists[list] = [];
+                    }
+                });
+            }, "/lists");
         },
 
         data() {
