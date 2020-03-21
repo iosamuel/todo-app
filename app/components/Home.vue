@@ -80,20 +80,14 @@
             },
             deleteFromList(key, list) {
                 list.splice(key, 1);
-                this.saveLocally();
             },
             toInProgress(key) {
                 const todoItem = this.lists.todo.splice(key, 1)[0];
                 this.lists.inProgress.push(todoItem);
-                this.saveLocally();
             },
             toFinished(key) {
                 const todoItem = this.lists.inProgress.splice(key, 1)[0];
                 this.lists.finished.push(todoItem);
-                this.saveLocally();
-            },
-            saveLocally() {
-                appSettings.setString("lists", JSON.stringify(this.lists));
             },
             getIcon(hex) {
                 return `font://${String.fromCharCode(hex)}`;
@@ -103,6 +97,15 @@
         mounted() {
             if (appSettings.getString("lists")) {
                 this.lists = JSON.parse(appSettings.getString("lists"));
+            }
+        },
+
+        watch: {
+            lists: {
+                handler: (lists) => {
+                    appSettings.setString("lists", JSON.stringify(lists));
+                },
+                deep: true
             }
         },
 
