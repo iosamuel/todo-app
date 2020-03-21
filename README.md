@@ -1,2 +1,1 @@
-# todo-app
-Todo APP in NativeScript (Vue.js)
+# ToDo App with NativeScript (Vue)
