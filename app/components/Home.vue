@@ -33,8 +33,8 @@
                         <ScrollView orientation="vertical" colSpan="2">
                             <ItemsListView 
                                 :list="lists.todo"
-                                @progress="toInProgress($event.key)"
-                                @delete="deleteFromList($event.key, $event.list)" />
+                                @progress="toInProgress($event)"
+                                @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
                     <TabContentItem>
@@ -42,8 +42,8 @@
                             <ItemsListView 
                                 :list="lists.inProgress"
                                 :buttonProgressIcon="String.fromCharCode(0xf058)"
-                                @progress="toFinished($event.key)"
-                                @delete="deleteFromList($event.key, $event.list)" />
+                                @progress="toFinished($event)"
+                                @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
                     <TabContentItem>
@@ -78,10 +78,10 @@
                 utilsModule.ad.dismissSoftInput();
                 this.textFieldValue = "";
             },
-            deleteFromList(key, list) {
+            deleteFromList({ key, list }) {
                 list.splice(key, 1);
             },
-            toInProgress(key) {
+            toInProgress({ key }) {
                 const todoItem = this.lists.todo.splice(key, 1)[0];
                 this.lists.inProgress.push(todoItem);
             },
