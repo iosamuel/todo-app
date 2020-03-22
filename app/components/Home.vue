@@ -33,25 +33,28 @@
                         <ScrollView orientation="vertical" colSpan="2">
                             <ItemsListView 
                                 :list="lists.todo"
+                                :listName="listsConstants.TODO"
                                 @progress="toInProgress($event.key)"
-                                @delete="deleteFromList($event.key, $event.list)" />
+                                @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
                     <TabContentItem>
                         <ScrollView orientation="vertical" colSpan="2">
                             <ItemsListView 
                                 :list="lists.inProgress"
+                                :listName="listsConstants.IN_PROGRESS"
                                 :buttonProgressIcon="String.fromCharCode(0xf058)"
                                 @progress="toFinished($event.key)"
-                                @delete="deleteFromList($event.key, $event.list)" />
+                                @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
                     <TabContentItem>
                         <ScrollView orientation="vertical" colSpan="2">
                             <ItemsListView 
                                 :list="lists.finished"
+                                :listName="listsConstants.FINISHED"
                                 :hasProgress="false"
-                                @delete="deleteFromList($event.key, $event.list)" />
+                                @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
 
@@ -73,49 +76,68 @@
 
         methods: {
             onButtonTap() {
-                this.lists.todo.push(this.textFieldValue);
+                this.pushToList(this.listsConstants.TODO, this.textFieldValue);
                 utilsModule.ad.dismissSoftInput();
                 this.textFieldValue = "";
             },
-            deleteFromList(key, list) {
-                list.splice(key, 1);
-            },
             toInProgress(key) {
-                const todoItem = this.lists.todo.splice(key, 1)[0];
-                this.lists.inProgress.push(todoItem);
+                const todoItem = this.lists[this.listsConstants.TODO][key];
+                this.pushToList(this.listsConstants.IN_PROGRESS, todoItem).then(() => {
+                    this.deleteFromList({
+                        key,
+                        list: this.lists[this.listsConstants.TODO],
+                        listName: this.listsConstants.TODO
+                    });
+                });
             },
             toFinished(key) {
-                const todoItem = this.lists.inProgress.splice(key, 1)[0];
-                this.lists.finished.push(todoItem);
+                const todoItem = this.lists[this.listsConstants.IN_PROGRESS][key];
+                this.pushToList(this.listsConstants.FINISHED, todoItem).then(() => {
+                    this.deleteFromList({
+                        key,
+                        list: this.lists[this.listsConstants.IN_PROGRESS],
+                        listName: this.listsConstants.IN_PROGRESS
+                    });
+                });
             },
             getIcon(hex) {
                 return `font://${String.fromCharCode(hex)}`;
             },
-            populateLists({ value }) {
-                this.lists = value;
-                ["todo", "inProgress", "finished"].forEach((list) => {
-                    if (!this.lists[list]) {
-                        this.lists[list] = [];
-                    }
-                });
-            }
-        },
 
-        watch: {
-            lists: {
-                handler(lists) {
-                    this.$firebase.setValue(
-                        "/lists",
-                        this.lists
-                    );
-                },
-                deep: true
+            // Firebase methods
+            populateLists({ value }) {
+                this.lists = value || {};
+                [this.listsConstants.TODO, this.listsConstants.IN_PROGRESS, this.listsConstants.FINISHED]
+                    .forEach((list) => {
+                        if (!this.lists[list]) {
+                            this.lists[list] = [];
+                        }
+                    });
+            },
+            pushToList(list, value) {
+                return this.$firebase.push(
+                    `/lists/${list}`,
+                    value
+                ).then(({ key }) => {
+                    this.lists[list][key] = value;
+                });
+            },
+            deleteFromList({ key, list, listName }) {
+                const data = {
+                    [key]: null
+                };
+                this.$firebase.update(
+                    `/lists/${listName}`,
+                    data
+                ).then(() => {
+                    delete list[key];
+                });
             }
         },
 
         mounted() {
             let listeners;
-            
+
             // Primera inicializacion
             this.$bus.$on("firebase:initialized", () => {
                 this.$firebase.getValue("/lists").then(this.populateLists);
@@ -132,6 +154,11 @@
 
         data() {
             return {
+                listsConstants: {
+                    TODO: "todo",
+                    IN_PROGRESS: "inProgress",
+                    FINISHED: "finished"
+                },
                 textFieldValue: "",
                 lists: {
                     todo: [],
