@@ -1,15 +1,15 @@
 <template>
-    <ListView for="item in sanitizedList">
+    <ListView for="(item, index) in list">
         <v-template>
             <GridLayout columns="*, 60, 60" rows="auto">
-                <Label :text="item[1]" class="t-12" row="0" col="0"
+                <Label :text="item.value" class="t-12" row="0" col="0"
                     textWrap="true" />
                 <Button v-if="hasProgress"
                     :text="buttonProgressIcon"
-                    @tap="$emit('progress', { key: item[0] })" row="0"
+                    @tap="$emit('progress', { key: item.key, index })" row="0"
                     class="far to-next-list" col="1" />
                 <Button :text="String.fromCharCode(0xf2ed)"
-                    @tap="$emit('delete', { key: item[0], list, listName })" row="0"
+                    @tap="$emit('delete', { key: item.key, index, list, listName })" row="0"
                     class="far delete-icon" col="2" />
             </GridLayout>
         </v-template>
@@ -32,11 +32,6 @@
         },
         data() {
             return {};
-        },
-        computed: {
-            sanitizedList() {
-                return Object.entries(this.list);
-            }
         }
     };
 </script>

@@ -34,7 +34,7 @@
                             <ItemsListView 
                                 :list="lists.todo"
                                 :listName="listsConstants.TODO"
-                                @progress="progressList({ key: $event.key, constantFrom: listsConstants.TODO, constantTo: listsConstants.IN_PROGRESS })"
+                                @progress="progressList({ ...$event, constantFrom: listsConstants.TODO, constantTo: listsConstants.IN_PROGRESS })"
                                 @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
@@ -44,7 +44,7 @@
                                 :list="lists.inProgress"
                                 :listName="listsConstants.IN_PROGRESS"
                                 :buttonProgressIcon="String.fromCharCode(0xf058)"
-                                @progress="progressList({ key: $event.key, constantFrom: listsConstants.IN_PROGRESS, constantTo: listsConstants.FINISHED })"
+                                @progress="progressList({ ...$event, constantFrom: listsConstants.IN_PROGRESS, constantTo: listsConstants.FINISHED })"
                                 @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
@@ -80,11 +80,12 @@
                 utilsModule.ad.dismissSoftInput();
                 this.textFieldValue = "";
             },
-            progressList({ key, constantFrom, constantTo }) {
-                const todoItem = this.lists[constantFrom][key];
-                this.pushToList(constantTo, todoItem).then(() => {
+            progressList({ key, index, constantFrom, constantTo }) {
+                const { value } = this.lists[constantFrom][index];
+                this.pushToList(constantTo, value).then(() => {
                     this.deleteFromList({
                         key,
+                        index,
                         list: this.lists[constantFrom],
                         listName: constantFrom
                     });
@@ -95,24 +96,39 @@
             },
 
             // Firebase methods
-            populateLists({ value }) {
-                this.lists = value || {};
+            populateLists() {
                 [this.listsConstants.TODO, this.listsConstants.IN_PROGRESS, this.listsConstants.FINISHED]
                     .forEach((list) => {
-                        if (!this.lists[list]) {
-                            this.lists[list] = [];
-                        }
+                        this.$firebase.query(({ key, value, type }) => {
+                            if (type !== "ChildRemoved") {
+                                if (!this.lists[list]) {
+                                    this.lists[list] = [];
+                                } else {
+                                    this.lists[list].push({ key, value: value.value });
+                                }
+                            }
+                        }, `/lists/${list}`, {
+                            orderBy: {
+                                type: this.$firebase.QueryOrderByType.CHILD,
+                                value: 'inserted',
+                            }
+                        });
                     });
             },
             pushToList(list, value) {
+                const time = new Date();
+                const data = {
+                    value,
+                    inserted: time.getTime()
+                };
                 return this.$firebase.push(
                     `/lists/${list}`,
-                    value
+                    data
                 ).then(({ key }) => {
-                    this.lists[list][key] = value;
+                    this.lists[list][key] = data;
                 });
             },
-            deleteFromList({ key, list, listName }) {
+            deleteFromList({ key, index, list, listName }) {
                 const data = {
                     [key]: null
                 };
@@ -120,26 +136,20 @@
                     `/lists/${listName}`,
                     data
                 ).then(() => {
-                    delete list[key];
+                    list.splice(index, 1);
                 });
             }
         },
 
         mounted() {
-            let listeners;
-
             // Primera inicializacion
             this.$bus.$on("firebase:initialized", () => {
-                this.$firebase.getValue("/lists").then(this.populateLists);
-                this.$firebase.addValueEventListener(this.populateLists, "/lists").then((listenerWrapper) => {
-                    listeners = listenerWrapper.listeners;
-                });
+                this.populateLists();
             });
 
             // Segunda vez que se ejecuta mounted +
-            if (!listeners) {
-                this.$firebase.addValueEventListener(this.populateLists, "/lists");
-            }
+            // TODO: verificar si existe el query
+            this.populateLists();
         },
 
         data() {
