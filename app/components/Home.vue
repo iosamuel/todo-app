@@ -34,7 +34,7 @@
                             <ItemsListView 
                                 :list="lists.todo"
                                 :listName="listsConstants.TODO"
-                                @progress="toInProgress($event.key)"
+                                @progress="progressList({ key: $event.key, constantFrom: listsConstants.TODO, constantTo: listsConstants.IN_PROGRESS })"
                                 @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
@@ -44,7 +44,7 @@
                                 :list="lists.inProgress"
                                 :listName="listsConstants.IN_PROGRESS"
                                 :buttonProgressIcon="String.fromCharCode(0xf058)"
-                                @progress="toFinished($event.key)"
+                                @progress="progressList({ key: $event.key, constantFrom: listsConstants.IN_PROGRESS, constantTo: listsConstants.FINISHED })"
                                 @delete="deleteFromList($event)" />
                         </ScrollView>
                     </TabContentItem>
@@ -80,23 +80,13 @@
                 utilsModule.ad.dismissSoftInput();
                 this.textFieldValue = "";
             },
-            toInProgress(key) {
-                const todoItem = this.lists[this.listsConstants.TODO][key];
-                this.pushToList(this.listsConstants.IN_PROGRESS, todoItem).then(() => {
+            progressList({ key, constantFrom, constantTo }) {
+                const todoItem = this.lists[constantFrom][key];
+                this.pushToList(constantTo, todoItem).then(() => {
                     this.deleteFromList({
                         key,
-                        list: this.lists[this.listsConstants.TODO],
-                        listName: this.listsConstants.TODO
-                    });
-                });
-            },
-            toFinished(key) {
-                const todoItem = this.lists[this.listsConstants.IN_PROGRESS][key];
-                this.pushToList(this.listsConstants.FINISHED, todoItem).then(() => {
-                    this.deleteFromList({
-                        key,
-                        list: this.lists[this.listsConstants.IN_PROGRESS],
-                        listName: this.listsConstants.IN_PROGRESS
+                        list: this.lists[constantFrom],
+                        listName: constantFrom
                     });
                 });
             },
